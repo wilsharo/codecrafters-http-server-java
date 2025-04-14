@@ -12,7 +12,11 @@ public class Main {
       // ensures that we don't run into 'Address already in use' errors
       serverSocket.setReuseAddress(true);
     
-      serverSocket.accept(); // Wait for connection from client.
+      //store accepted connection in Socket object so that we can ineract with the client
+      Socket clienSocket = serverSocket.accept();
+      //The server sends an HTTP response to the client by writing directly to the socket's output stream
+      //The response consists of the HTTP version, status code, and reason phrase, followed by two CRLF sequences, indicating the end of the status line and headers.
+      clienSocket.getOutputStream().write("HTTP/1.1 200 OK\r\n\r\n".getBytes());
       System.out.println("accepted new connection");
     } catch (IOException e) {
       System.out.println("IOException: " + e.getMessage());
