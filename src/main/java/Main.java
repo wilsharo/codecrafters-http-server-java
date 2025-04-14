@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
@@ -32,16 +33,26 @@ public class Main {
       String method = requestParts[0]; // GET, POST etc
       String path = requestParts[1];
 
-      System.out.println("path equals: " + path);
+      DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
 
       if ("/".equals(path)) {
         // Handle request for root path
-        clientSocket.getOutputStream().write("HTTP/1.1 200 OK\r\n\r\n".getBytes());
+        out.write("HTTP/1.1 200 OK\r\n\r\n".getBytes());
+      } else if (path.startsWith("/echo/")) {
+
+        String echoeText = path.substring(6);
+
+        out.write(
+            ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " +
+                echoeText.length() + "\r\n\r\n" + echoeText)
+                .getBytes());
       } else {
         // Handle request for /other paths
-        clientSocket.getOutputStream().write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+        out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
       }
+
       in.close();
+      out.close();
       clientSocket.close();
     } catch (IOException e) {
       System.out.println("IOException: " + e.getMessage());
