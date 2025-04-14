@@ -1,4 +1,7 @@
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
@@ -7,17 +10,39 @@ public class Main {
 
     try {
       ServerSocket serverSocket = new ServerSocket(4221);
-    
+
       // Since the tester restarts the program quite often, setting SO_REUSEADDR
       // ensures that we don't run into 'Address already in use' errors
       serverSocket.setReuseAddress(true);
-    
-      //store accepted connection in Socket object so that we can ineract with the client
-      Socket clienSocket = serverSocket.accept();
-      //The server sends an HTTP response to the client by writing directly to the socket's output stream
-      //The response consists of the HTTP version, status code, and reason phrase, followed by two CRLF sequences, indicating the end of the status line and headers.
-      clienSocket.getOutputStream().write("HTTP/1.1 200 OK\r\n\r\n".getBytes());
+
+      // store accepted connection in Socket object so that we can ineract with the
+      // client
+      Socket clientSocket = serverSocket.accept();
+
       System.out.println("accepted new connection");
+
+      // Use the InputStream of the Socket to read the client's request. The request
+      // is typically an HTTP request, and the path is part of the first line.
+      BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+      String requestLine = in.readLine();
+
+      // Extract the path from the request line. The path is usually the second
+      // element when splitting by spaces.
+      String[] requestParts = requestLine.split(" ");
+      String method = requestParts[0]; // GET, POST etc
+      String path = requestParts[1];
+
+      System.out.println("path equals: " + path);
+
+      if ("/".equals(path)) {
+        // Handle request for root path
+        clientSocket.getOutputStream().write("HTTP/1.1 200 OK\r\n\r\n".getBytes());
+      } else {
+        // Handle request for /other paths
+        clientSocket.getOutputStream().write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+      }
+      in.close();
+      clientSocket.close();
     } catch (IOException e) {
       System.out.println("IOException: " + e.getMessage());
     }
