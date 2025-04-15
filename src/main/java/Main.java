@@ -46,6 +46,32 @@ public class Main {
             ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " +
                 echoeText.length() + "\r\n\r\n" + echoeText)
                 .getBytes());
+      } else if (path.startsWith("/user-agent")) {
+        StringBuilder request = new StringBuilder();
+        String line;
+
+        while ((line = in.readLine()) != null) {
+           request.append(line).append("\r\n");
+            // Check for end of headers (empty line)
+           if (line.isEmpty()) break;
+        }
+
+        String fullRequest = request.toString();
+
+        System.out.println("fullRequest: " + fullRequest);
+
+        int userAgentIndex = fullRequest.indexOf("User-Agent");
+
+        String userAgent = request.toString().substring(userAgentIndex + 12);
+
+        System.out.println("userAgent: " + userAgent);
+
+        int userAgentLength = userAgent.length() - 4;
+
+        out.write(
+            ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " +
+            userAgentLength + "\r\n\r\n" + userAgent)
+                .getBytes());
       } else {
         // Handle request for /other paths
         out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
