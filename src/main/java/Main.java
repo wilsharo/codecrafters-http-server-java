@@ -2,9 +2,9 @@ import java.io.BufferedReader;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+
 
 public class Main {
   public static void main(String[] args) {
@@ -64,9 +64,9 @@ public class Main {
 
         String userAgent = request.toString().substring(userAgentIndex + 12);
 
-        System.out.println("userAgent: " + userAgent);
+        System.out.println("userAgent: " + userAgent.trim());
 
-        int userAgentLength = userAgent.length() - 4;
+        int userAgentLength = userAgent.length();
 
         out.write(
             ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " +
