@@ -62,9 +62,9 @@ public class Main {
 
         int userAgentIndex = fullRequest.indexOf("User-Agent");
 
-        String userAgent = request.toString().substring(userAgentIndex + 12);
+        String userAgent = request.toString().substring(userAgentIndex + 12).trim();
 
-        System.out.println("userAgent: " + userAgent.trim());
+        System.out.println("userAgent: " + userAgent);
 
         int userAgentLength = userAgent.length();
 
