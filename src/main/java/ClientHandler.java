@@ -1,14 +1,20 @@
 import java.io.BufferedReader;
 import java.io.DataOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.Socket;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 public class ClientHandler implements Runnable {
   private final Socket clientSocket;
+  private final String directoryString;
 
-  public ClientHandler(Socket socket) {
+  public ClientHandler(Socket socket, String directoryString) {
     this.clientSocket = socket;
+    this.directoryString = directoryString;
   }
 
   @Override
@@ -58,14 +64,38 @@ public class ClientHandler implements Runnable {
 
         String userAgent = request.toString().substring(userAgentIndex + 12).trim();
 
-        System.out.println("userAgent: " + userAgent);
-
         int userAgentLength = userAgent.length();
 
         out.write(
             ("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: " +
                 userAgentLength + "\r\n\r\n" + userAgent)
                 .getBytes());
+      } else if (path.startsWith("/files/")) {
+
+        String fileName = path.substring(7);
+
+        String filePathString = directoryString + fileName;
+
+        File directory = new File(directoryString);
+        File file = new File(directory, fileName);
+
+        if(file.exists()){
+        // Use Paths.get() for robust path construction
+        Path filePath = Paths.get(filePathString);
+
+        String fileContent = new String(Files.readAllBytes(filePath));
+
+        // Get the file size in bytes
+        long fileSizeInBytes = Files.size(filePath);
+
+          out.write(
+            ("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " +
+                fileSizeInBytes + "\r\n\r\n" + fileContent)
+                .getBytes());
+        }else{
+          out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+        }
+
       } else {
         // Handle request for /other paths
         out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());

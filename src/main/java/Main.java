@@ -8,13 +8,18 @@ public class Main {
 
   private static final int PORT = 4221; // Choose a suitable port
   private static final int MAX_THREADS = 10; // Adjust based on your needs
+  private static String directoryString;
+
 
   public static void main(String[] args) {
     ExecutorService executorService = Executors.newFixedThreadPool(MAX_THREADS);
 
-    try {
+    // Parse command line arguments
+    if (args.length > 1 && args[0].equals("--directory")) {
+      directoryString = args[1];
+    }
 
-      ServerSocket serverSocket = new ServerSocket(PORT);
+    try (ServerSocket serverSocket = new ServerSocket(PORT)) {
 
       // Since the tester restarts the program quite often, setting SO_REUSEADDR
       // ensures that we don't run into 'Address already in use' errors
@@ -28,7 +33,7 @@ public class Main {
           System.out.println("Client connected: " + clientSocket.getInetAddress().getHostAddress());
 
           // Create a Runnable task to handle the client connection
-          ClientHandler clientHandler = new ClientHandler(clientSocket);
+          ClientHandler clientHandler = new ClientHandler(clientSocket, directoryString);
 
           // Submit the task to the thread pool for execution
           executorService.submit(clientHandler);
