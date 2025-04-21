@@ -10,7 +10,6 @@ public class Main {
   private static final int MAX_THREADS = 10; // Adjust based on your needs
   private static String directoryString;
 
-
   public static void main(String[] args) {
     ExecutorService executorService = Executors.newFixedThreadPool(MAX_THREADS);
 

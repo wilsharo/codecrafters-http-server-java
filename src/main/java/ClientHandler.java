@@ -7,6 +7,8 @@ import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ClientHandler implements Runnable {
   private final Socket clientSocket;
@@ -29,10 +31,37 @@ public class ClientHandler implements Runnable {
       // Extract the path from the request line. The path is usually the second
       // element when splitting by spaces.
       String[] requestParts = requestLine.split(" ");
-      // String method = requestParts[0]; // GET, POST etc
+      String method = requestParts[0]; // GET, POST etc
       String path = requestParts[1];
 
       DataOutputStream out = new DataOutputStream(clientSocket.getOutputStream());
+
+      Map<String, String> headers = new HashMap<>();
+
+      // Read the request headers and add them to a map
+      String line;
+      while ((line = in.readLine()) != null && !line.isEmpty()) {
+
+        System.out.println("line: " + line);
+
+        int userAgentIndex = line.indexOf("User-Agent");
+
+        if (userAgentIndex != -1) {
+          headers.put("User-Agent".toLowerCase(), line.substring(userAgentIndex + 12).trim());
+        }
+
+        int contentLengthIndex = line.indexOf("Content-Length");
+
+        if (contentLengthIndex != -1) {
+          headers.put("Content-Length".toLowerCase(), line.substring(contentLengthIndex + 16).trim());
+        }
+
+        int contentTypeIndex = line.indexOf("Content-Type");
+
+        if (contentTypeIndex != -1) {
+          headers.put("Content-Type".toLowerCase(), line.substring(contentTypeIndex + 14).trim());
+        }
+      }
 
       if ("/".equals(path)) {
         // Handle request for root path
@@ -46,23 +75,8 @@ public class ClientHandler implements Runnable {
                 echoeText.length() + "\r\n\r\n" + echoeText)
                 .getBytes());
       } else if (path.startsWith("/user-agent")) {
-        StringBuilder request = new StringBuilder();
-        String line;
 
-        while ((line = in.readLine()) != null) {
-          request.append(line).append("\r\n");
-          // Check for end of headers (empty line)
-          if (line.isEmpty())
-            break;
-        }
-
-        String fullRequest = request.toString();
-
-        System.out.println("fullRequest: " + fullRequest);
-
-        int userAgentIndex = fullRequest.indexOf("User-Agent");
-
-        String userAgent = request.toString().substring(userAgentIndex + 12).trim();
+        String userAgent = headers.get("user-agent");
 
         int userAgentLength = userAgent.length();
 
@@ -72,28 +86,58 @@ public class ClientHandler implements Runnable {
                 .getBytes());
       } else if (path.startsWith("/files/")) {
 
-        String fileName = path.substring(7);
+        if (method.equalsIgnoreCase("post")) {
 
-        String filePathString = directoryString + fileName;
+          int contentLength = Integer.parseInt(headers.get("content-length").trim());
 
-        File directory = new File(directoryString);
-        File file = new File(directory, fileName);
+          System.out.println("content length: " + contentLength);
 
-        if(file.exists()){
-        // Use Paths.get() for robust path construction
-        Path filePath = Paths.get(filePathString);
+          // Read the request body, if Content-Length is greater than 0
+          String requestBody = "";
+          if (contentLength > 0) {
+            char[] bodyChars = new char[contentLength];
+            int bytesRead = in.read(bodyChars); // Use bufferedReader.read
+            if (bytesRead > 0) {
+              requestBody = new String(bodyChars, 0, bytesRead);
+            }
+            // Write the request body to a file
+            try {
+              String fileName = path.substring(7);
+              File tempFile = new File(directoryString + "/" + fileName);
+              Files.write(Paths.get(tempFile.getAbsolutePath()), requestBody.getBytes());
+            } catch (IOException e) {
+              System.err.println("Error writing to file: " + e.getMessage());
+            }
+          } else {
+            System.out.println("No body received");
+          }
 
-        String fileContent = new String(Files.readAllBytes(filePath));
+          out.write("HTTP/1.1 201 Created\r\n\r\n".getBytes());
 
-        // Get the file size in bytes
-        long fileSizeInBytes = Files.size(filePath);
+        } else {
+          String fileName = path.substring(7);
 
-          out.write(
-            ("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " +
-                fileSizeInBytes + "\r\n\r\n" + fileContent)
-                .getBytes());
-        }else{
-          out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+          String filePathString = directoryString + fileName;
+
+          File directory = new File(directoryString);
+          File file = new File(directory, fileName);
+
+          if (file.exists()) {
+            // Use Paths.get() for robust path construction
+            Path filePath = Paths.get(filePathString);
+
+            String fileContent = new String(Files.readAllBytes(filePath));
+
+            // Get the file size in bytes
+            long fileSizeInBytes = Files.size(filePath);
+
+            out.write(
+                ("HTTP/1.1 200 OK\r\nContent-Type: application/octet-stream\r\nContent-Length: " +
+                    fileSizeInBytes + "\r\n\r\n" + fileContent)
+                    .getBytes());
+          } else {
+            out.write("HTTP/1.1 404 Not Found\r\n\r\n".getBytes());
+          }
         }
 
       } else {
